@@ -1,0 +1,218 @@
+<script src='https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.js'></script>
+<script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.0/mapbox-gl-geocoder.min.js'></script>
+<link href='https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.css' rel='stylesheet' />
+<link rel='stylesheet' href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.0/mapbox-gl-geocoder.css' type='text/css' />
+
+<div id='map'></div>
+<div class='map-overlay' id='features'><h2>Redlining in Oakland (1937)</h2><div id='pd'><p>click on an area</p></div><div id='strv'><p></p></div></div>
+<div class='map-overlay' id='legend'></div>
+
+
+<style>
+
+
+    body {
+  margin: 0;
+  padding: 0;
+}
+
+h2,
+h3 {
+  margin: 10px;
+  font-size: 18px;
+}
+
+h3 {
+  font-size: 16px;
+}
+
+p {
+  margin: 10px;
+}
+
+/**
+* Create a position for the map
+* on the page */
+#map {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+}
+
+/**
+* Set rules for how the map overlays
+* (information box and legend) will be displayed
+* on the page. */
+.map-overlay {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: #fff;
+  margin-right: 20px;
+  font-family: Arial, sans-serif;
+  overflow: auto;
+  border-radius: 3px;
+}
+
+#features {
+  top: 30;
+  height: 400px;
+  margin-top: 20px;
+  width: 350px;
+}
+
+#legend {
+  padding: 10px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  line-height: 18px;
+  height: 75px;
+  margin-bottom: 40px;
+  width: 150px;
+}
+
+.legend-key {
+  display: inline-block;
+  border-radius: 20%;
+  width: 10px;
+  height: 10px;
+  margin-right: 5px;
+}
+
+</style>
+
+<script>
+    mapboxgl.accessToken =
+      "pk.eyJ1Ijoibm9lbGFuaSIsImEiOiJja3o0cXFmZ2UwajRhMm5xb2QyM2JxZm5uIn0.8gOv0EqftP32_L7VIFEblQ";
+    const map = new mapboxgl.Map({
+      container: "map", // container id
+      style: "mapbox://styles/noelani/ckzz6qjnv00co15n7aau94amt",
+      //style: 'mapbox://styles/mapbox/streets-v11',
+      center: [-122.27, 37.8], // starting position
+      zoom: 11.5, // starting zoom
+    });
+
+    const geocoder = new MapboxGeocoder({
+  // Initialize the geocoder
+  accessToken: mapboxgl.accessToken, // Set the access token
+  placeholder: 'Search for places in Oakland',
+  mapboxgl: mapboxgl, // Set the mapbox-gl instance
+  marker: false, // Do not use the default marker style
+  bbox: [-122.30937, 37.84214, -122.23715, 37.89838], // Boundary for Berkeley --> !! change to Oakland !!
+  proximity: {
+    longitude: -122.27,
+    latitude: 37.8
+  }
+});
+// Add the geocoder to the map
+
+map.addControl(geocoder);
+
+    map.on('load', () => {
+        const layers = [
+  'A: First Grade',
+  'B: Second Grade',
+  'C: Third Grade',
+  'D: Fourth Grade',
+];
+const colors = [
+  '#91bc76',
+  '#8dbfbb',
+  '#e0d87b',
+  '#da9a8b',
+];
+// create legend
+const legend = document.getElementById('legend');
+
+layers.forEach((layer, i) => {
+  const color = colors[i];
+  const item = document.createElement('div');
+  const key = document.createElement('span');
+  key.className = 'legend-key';
+  key.style.backgroundColor = color;
+
+  const value = document.createElement('span');
+  value.innerHTML = `${layer}`;
+  item.appendChild(key);
+  item.appendChild(value);
+  legend.appendChild(item);
+});
+///////////////Visibility
+map.addSource('OakDistricts', {
+type: 'vector',
+url: 'https://studio.mapbox.com/tilesets/noelani.5q9146di'
+});
+map.addLayer({
+'id': 'OaklandDistricts',
+'type': 'fill',
+'source': 'OakDistricts',
+'source-layer': 'country_boundaries',//'City_of_Oakland_Council_Distr-bd2cz5',
+'layout': {
+// Make the layer visible by default.
+'visibility': 'visible',
+},
+'paint': {
+'line-color': '#877b59',
+'line-width': 1
+}
+});
+//// this is from the tutorial ////
+/*map.addSource('contours', {
+type: 'vector',
+url: 'mapbox://mapbox.mapbox-terrain-v2'
+});
+map.addLayer({
+'id': 'contours',
+'type': 'line',
+'source': 'contours',
+'source-layer': 'contour',
+'layout': {
+// Make the layer visible by default.
+'visibility': 'visible',
+'line-join': 'round',
+'line-cap': 'round'
+},
+'paint': {
+'line-color': '#877b59',
+'line-width': 1
+}
+});*/
+
+
+//const clickedLayer=map.getLayer('Oak_Districts');
+//map.setLayoutProperty(clickedLayer, 'visibility', 'none');
+
+});
+map.on('click', (event) => {
+  const grades = map.queryRenderedFeatures(event.point, {
+    layers: ['Oak_1937_HOLC']
+  });
+  document.getElementById('pd').innerHTML = grades.length
+    ? `<p>${grades[0].properties.area_description_data.split("\"")[3]}</p>
+    <p>HOLC assigned grade: <strong>${grades[0].properties.holc_grade}</strong> </p>
+    <p>${grades[0].properties.area_description_data.split("\"")[11]}</p>
+    <p>${grades[0].properties.area_description_data.split("\"")[15]}</p>
+    <p>${grades[0].properties.area_description_data.split("\"")[27]}</p>`
+    : `<p>Click on a highlighted Area</p>`;//when no data is clicked
+});
+// streetview code //
+map.on("click", function (e) {
+    
+        var coordinates = e.lngLat;
+        var long = e.lngLat.lng;
+        var lati = e.lngLat.lat;
+        var website ="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=" +lati + "%2C" +long;
+        document.getElementById('strv').innerHTML ='<p><a href="' +website + '" target="_blank" title="Opens in a new window">   Open in Google Streetview</a></p>';
+        //new mapboxgl.Popup()
+        //  .setLngLat(coordinates)
+        //  .setHTML(
+        //    '<a href="' +
+        //      website +
+        //      '" target="_blank" title="Opens in a new window"> Open in Google Streetview</a>'
+        //  )
+        //  .addTo(map);
+      });
+      
+</script>
+
+
